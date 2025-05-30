@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Royal Gallery - Login</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(to bottom right, #f0f0f0, #e0e0e0);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            color: #333;
+        }
+
+      .login-container {
+            background-color: #fff;
+            padding: 40px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            width: 350px;
+        }
+
+        h2 {
+            font-family: 'Playfair Display', serif;
+            color: #2c3e50;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+      .input-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            color: #777;
+        }
+
+        input[type="text"],
+        input[type="password"] {
+            width: calc(100% - 12px);
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+            font-size: 16px;
+        }
+
+        button {
+            background-color: #3498db;
+            color: #fff;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            width: 100%;
+            font-size: 16px;
+            transition: background-color 0.3s;
+        }
+
+        button:hover {
+            background-color: #2980b9;
+        }
+
+      .signup-link {
+            text-align: center;
+            margin-top: 20px;
+        }
+
+      .signup-link a {
+            color: #3498db;
+            text-decoration: none;
+        }
+
+      .signup-link a:hover {
+            text-decoration: underline;
+        }
+    </style>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display&family=Segoe+UI&display=swap" rel="stylesheet">
+    <script>
+        function handleLogin(event) {
+            event.preventDefault(); // Prevent form from submitting normally
+            window.location.href = "index.html"; // Replace "index.html" with the actual path
+        }
+    </script>
+</head>
+<body>
+
+    <div class="login-container">
+        <h2>Welcome to Royal Gallery</h2>
+
+        <form onsubmit="handleLogin(event)">
+            <div class="input-group">
+                <label for="username">Username</label>
+                <input type="text" id="username" name="username" required>
+            </div>group">
+                <label for="password">Password</label>
+                <input type="password" id="password" name="password" required>
+            </div>
+
+            <button type="submit">Login</button>
+
+            <div class="signup-link">
+                Don't have an account? <a href="#">Sign up</a>
+            </div>
+        </form>
+    </div>
+
+</body>
+</html>
