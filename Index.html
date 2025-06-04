@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Art Gallery</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            overscroll-behavior-y: contain; /* Prevents pull-to-refresh issues on mobile when modal is open */
+        }
+        .nav-link {
+            @apply px-4 py-2 text-gray-700 hover:text-indigo-600 rounded-md text-sm font-medium transition-colors;
+        }
+        .nav-link.active {
+            @apply text-indigo-600 bg-indigo-100;
+        }
+        .gallery-item img {
+            aspect-ratio: 1 / 1;
+            object-fit: cover;
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.8);
+            align-items: center;
+            justify-content: center;
+        }
+        .modal-content {
+            margin: auto;
+            display: block;
+            max-width: 80vw;
+            max-height: 80vh;
+        }
+        .modal-caption {
+            text-align: center;
+            color: #ccc;
+            padding: 10px 0;
+            font-size: 1.125rem; /* text-lg */
+        }
+        .close-modal {
+            position: absolute;
+            top: 20px;
+            right: 35px;
+            color: #f1f1f1;
+            font-size: 40px;
+            font-weight: bold;
+            transition: 0.3s;
+        }
+        .close-modal:hover,
+        .close-modal:focus {
+            color: #bbb;
+            text-decoration: none;
+            cursor: pointer;
+        }
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+        .fade-in {
+            animation: fadeIn 0.5s ease-in-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        .slide-up {
+            animation: slideUp 0.5s ease-out forwards; /* Added forwards to keep state */
+            opacity: 0; /* Start hidden for JS-driven animation */
+        }
+        .slide-up-active { /* Class to trigger animation */
+             opacity: 1;
+             transform: translateY(0);
+        }
+        @keyframes slideUp {
+            from { transform: translateY(20px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        /* Ensure hidden class takes precedence */
+        .hidden {
+            display: none !important;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-800">
+
+    <!-- Navigation -->
+    <nav class="bg-white shadow-md sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <div class="flex items-center">
+                    <a href="#home" id="brand-logo" class="text-2xl font-bold text-indigo-600">My Gallery</a>
+                </div>
+                <div class="hidden md:block">
+                    <div class="ml-10 flex items-baseline space-x-4">
+                        <a href="#home" class="nav-link main-nav-link" data-section="home">Home</a>
+                        <a href="#gallery" class="nav-link main-nav-link" data-section="gallery">Gallery</a>
+                        <a href="#about" class="nav-link main-nav-link" data-section="about">About</a>
+                        <a href="#contact" class="nav-link main-nav-link" data-section="contact">Contact</a>
+                        <a href="#" id="authLinkDesktop" class="nav-link">Login</a>
+                    </div>
+                </div>
+                <div class="md:hidden">
+                     <a href="#" id="authLinkMobileToggle" class="nav-link mr-2">Login</a>
+                    <button id="mobile-menu-button" class="inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-white hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-white">
+                        <span class="sr-only">Open main menu</span>
+                        <svg class="block h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7" />
+                        </svg>
+                        <svg class="hidden h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+        <!-- Mobile menu, show/hide based on menu state. -->
+        <div class="md:hidden hidden" id="mobile-menu">
+            <div class="px-2 pt-2 pb-3 space-y-1 sm:px-3">
+                <a href="#home" class="nav-link main-nav-link block" data-section="home">Home</a>
+                <a href="#gallery" class="nav-link main-nav-link block" data-section="gallery">Gallery</a>
+                <a href="#about" class="nav-link main-nav-link block" data-section="about">About</a>
+                <a href="#contact" class="nav-link main-nav-link block" data-section="contact">Contact</a>
+                <!-- Mobile auth link will be managed by JS if needed, or we can simplify by having only one auth link that is styled for mobile -->
+            </div>
+        </div>
+    </nav>
+
+    <!-- Login Page Section -->
+    <section id="login-page" class="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-indigo-500 to-purple-600 p-6 fade-in">
+        <div class="bg-white p-8 sm:p-10 rounded-xl shadow-2xl w-full max-w-md text-center">
+            <h2 class="text-3xl font-bold text-gray-800 mb-8">Welcome Back!</h2>
+            <form id="login-form" class="space-y-6">
+                <div>
+                    <label for="username" class="block text-sm font-medium text-gray-700 text-left">Username</label>
+                    <input type="text" name="username" id="username" required class="mt-1 block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" placeholder="Enter your username">
+                </div>
+                <div>
+                    <label for="password" class="block text-sm font-medium text-gray-700 text-left">Password</label>
+                    <input type="password" name="password" id="password" required class="mt-1 block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" placeholder="Enter your password">
+                </div>
+                <div>
+                    <button type="submit" class="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-base font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-transform transform hover:scale-105">
+                        Login
+                    </button>
+                </div>
+            </form>
+            <p id="login-message" class="mt-4 text-sm text-red-500"></p>
+        </div>
+    </section>
+
+    <!-- Main Content Area (initially hidden) -->
+    <main id="main-content" class="pt-4 hidden">
+        <!-- Home Section -->
+        <section id="home" class="min-h-screen flex items-center justify-center bg-indigo-50 p-6">
+            <div class="text-center max-w-3xl mx-auto">
+                <img src="https://placehold.co/600x400/6366F1/FFFFFF?text=Featured+Artwork" alt="Featured Artwork" class="w-full max-w-xl mx-auto rounded-lg shadow-xl mb-8" onerror="this.onerror=null; this.src='https://placehold.co/600x400/CCCCCC/FFFFFF?text=Image+Error';">
+                <h1 class="text-5xl md:text-6xl font-bold text-indigo-700 mb-6 slide-up">Welcome to My Art World</h1>
+                <p class="text-lg md:text-xl text-gray-600 mb-8 slide-up" style="animation-delay: 0.2s;">
+                    Discover a collection of passion, creativity, and vision. Each piece tells a unique story.
+                </p>
+                <a href="#gallery" data-section="gallery" class="nav-link-button inline-block bg-indigo-600 text-white px-8 py-3 rounded-lg text-lg font-semibold hover:bg-indigo-700 transition-transform transform hover:scale-105 slide-up" style="animation-delay: 0.4s;">
+                    Explore Gallery
+                </a>
+            </div>
+        </section>
+
+        <!-- Gallery Section -->
+        <section id="gallery" class="py-16 px-4 sm:px-6 lg:px-8 bg-white">
+            <div class="max-w-7xl mx-auto">
+                <h2 class="text-4xl font-bold text-center text-gray-800 mb-12 slide-up">My Collection</h2>
+                <div id="gallery-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+                    <!-- Gallery items will be injected here by JavaScript -->
+                </div>
+            </div>
+        </section>
+
+        <!-- About Section -->
+        <section id="about" class="py-16 px-4 sm:px-6 lg:px-8 bg-gray-100">
+            <div class="max-w-3xl mx-auto text-center">
+                <h2 class="text-4xl font-bold text-gray-800 mb-8 slide-up">About the Artist</h2>
+                <img src="https://placehold.co/200x200/A3BFFA/FFFFFF?text=Artist+Photo" alt="Artist Photo" class="w-48 h-48 rounded-full mx-auto mb-6 shadow-lg slide-up" style="animation-delay: 0.1s;" onerror="this.onerror=null; this.src='https://placehold.co/200x200/CCCCCC/FFFFFF?text=Image+Error';">
+                <p class="text-lg text-gray-700 mb-4 slide-up" style="animation-delay: 0.2s;">
+                    Hello! I'm [Your Name], a passionate artist driven by [Your Motivation/Inspiration]. My work explores themes of [Your Themes] using [Your Preferred Mediums].
+                </p>
+                <p class="text-lg text-gray-700 mb-4 slide-up" style="animation-delay: 0.3s;">
+                    I believe art is a powerful form of communication, a way to connect with others and express the inexpressible. Through my pieces, I aim to [Your Artistic Goals].
+                </p>
+                <p class="text-lg text-gray-700 slide-up" style="animation-delay: 0.4s;">
+                    Thank you for visiting my gallery. I hope my art resonates with you.
+                </p>
+            </div>
+        </section>
+
+        <!-- Contact Section -->
+        <section id="contact" class="py-16 px-4 sm:px-6 lg:px-8 bg-indigo-50">
+            <div class="max-w-xl mx-auto">
+                <h2 class="text-4xl font-bold text-center text-gray-800 mb-10 slide-up">Get In Touch</h2>
+                <form id="contact-form" class="space-y-6 bg-white p-8 rounded-lg shadow-xl slide-up" style="animation-delay: 0.1s;">
+                    <div>
+                        <label for="name" class="block text-sm font-medium text-gray-700">Full Name</label>
+                        <input type="text" name="name" id="name" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                    </div>
+                    <div>
+                        <label for="email" class="block text-sm font-medium text-gray-700">Email Address</label>
+                        <input type="email" name="email" id="email" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                    </div>
+                    <div>
+                        <label for="message" class="block text-sm font-medium text-gray-700">Message</label>
+                        <textarea name="message" id="message" rows="4" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"></textarea>
+                    </div>
+                    <div>
+                        <button type="submit" class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                            Send Message
+                        </button>
+                    </div>
+                </form>
+                <div id="form-submission-message" class="mt-4 text-center"></div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Footer (initially hidden) -->
+    <footer id="page-footer" class="bg-gray-800 text-white py-8 text-center hidden">
+        <p>&copy; <span id="currentYear"></span> [Your Name]. All rights reserved.</p>
+        <p class="text-sm text-gray-400">Designed with passion.</p>
+    </footer>
+
+    <!-- Modal for Gallery Images -->
+    <div id="imageModal" class="modal">
+        <span class="close-modal" id="closeModalButton">&times;</span>
+        <img class="modal-content" id="modalImage" alt="Enlarged artwork">
+        <div id="modalCaption" class="modal-caption"></div>
+    </div>
+
+    <script>
+        // --- DOM Elements ---
+        const loginPage = document.getElementById('login-page');
+        const mainContent = document.getElementById('main-content');
+        const pageFooter = document.getElementById('page-footer');
+        const loginForm = document.getElementById('login-form');
+        const usernameInput = document.getElementById('username');
+        const passwordInput = document.getElementById('password');
+        const loginMessage = document.getElementById('login-message');
+        
+        const authLinkDesktop = document.getElementById('authLinkDesktop');
+        const authLinkMobileToggle = document.getElementById('authLinkMobileToggle'); // Auth link visible before mobile menu toggle
+        const brandLogo = document.getElementById('brand-logo');
+
+        const mobileMenuButton = document.getElementById('mobile-menu-button');
+        const mobileMenu = document.getElementById('mobile-menu');
+        const hamburgerIcon = mobileMenuButton.querySelector('svg:first-child');
+        const closeIcon = mobileMenuButton.querySelector('svg:last-child');
+        
+        const allNavLinks = document.querySelectorAll('.nav-link'); // All links for active state management
+        const mainNavLinks = document.querySelectorAll('.main-nav-link'); // Links for content sections
+        const sections = document.querySelectorAll('#main-content section'); // Sections within main content
+
+        // --- State ---
+        let isLoggedIn = false; // Mock login state
+
+        // --- Artworks Data (Placeholder) ---
+        const artworks = [
+            { id: 1, title: "Abstract Dreams", medium: "Oil on Canvas", year: 2023, description: "A vibrant exploration of subconscious thoughts.", imageUrl: "https://placehold.co/400x400/FF6347/FFFFFF?text=Artwork+1", altText: "Abstract painting with red and orange tones" },
+            { id: 2, title: "City Lights", medium: "Watercolor", year: 2022, description: "The bustling energy of a city at night.", imageUrl: "https://placehold.co/400x400/4682B4/FFFFFF?text=Artwork+2", altText: "Watercolor painting of a city skyline" },
+            { id: 3, title: "Forest Whisper", medium: "Acrylic", year: 2024, description: "The serene beauty of a sunlit forest.", imageUrl: "https://placehold.co/400x400/32CD32/FFFFFF?text=Artwork+3", altText: "Acrylic painting of a green forest" },
+            { id: 4, title: "Ocean's Depth", medium: "Mixed Media", year: 2023, description: "Mysteries hidden beneath the waves.", imageUrl: "https://placehold.co/400x400/00CED1/FFFFFF?text=Artwork+4", altText: "Mixed media artwork of the ocean" },
+            { id: 5, title: "Portrait of Time", medium: "Charcoal", year: 2021, description: "A study of age and experience.", imageUrl: "https://placehold.co/400x400/808080/FFFFFF?text=Artwork+5", altText: "Charcoal portrait" },
+            { id: 6, title: "Desert Bloom", medium: "Pastel", year: 2024, description: "Life finds a way in the harshest environments.", imageUrl: "https://placehold.co/400x400/DAA520/FFFFFF?text=Artwork+6", altText: "Pastel drawing of a desert flower" },
+            { id: 7, title: "Galactic Dance", medium: "Digital Art", year: 2023, description: "Nebulae and stars in cosmic harmony.", imageUrl: "https://placehold.co/400x400/4B0082/FFFFFF?text=Artwork+7", altText: "Digital art of a galaxy" },
+            { id: 8, title: "Still Life Reimagined", medium: "Oil on Panel", year: 2022, description: "A modern take on a classic subject.", imageUrl: "https://placehold.co/400x400/D2691E/FFFFFF?text=Artwork+8", altText: "Oil painting of a still life" },
+        ];
+
+        // --- Authentication Functions ---
+        function displayLoginPage() {
+            loginPage.classList.remove('hidden');
+            mainContent.classList.add('hidden');
+            pageFooter.classList.add('hidden');
+            
+            authLinkDesktop.textContent = 'Login';
+            authLinkMobileToggle.textContent = 'Login';
+            authLinkDesktop.removeEventListener('click', handleLogout);
+            authLinkMobileToggle.removeEventListener('click', handleLogout);
+            // No specific event needed for "Login" as form handles it, or it could show the login page if other content was visible
+
+            loginMessage.textContent = ''; // Clear any previous messages
+            usernameInput.value = ''; // Clear inputs
+            passwordInput.value = '';
+            
+            // Deactivate all main nav links
+            mainNavLinks.forEach(link => link.classList.remove('active'));
+            // Hide main nav links on mobile if login is required to see anything
+            mobileMenu.querySelectorAll('.main-nav-link').forEach(link => link.classList.add('hidden'));
+            document.querySelectorAll('.nav-link[data-section]').forEach(link => link.classList.add('hidden')); // Hide main nav links on desktop
+            authLinkMobileToggle.classList.remove('hidden'); // Ensure mobile login button is visible
+
+            window.scrollTo(0,0); // Scroll to top
+        }
+
+        function displayMainContent() {
+            loginPage.classList.add('hidden');
+            mainContent.classList.remove('hidden');
+            pageFooter.classList.remove('hidden');
+
+            authLinkDesktop.textContent = 'Logout';
+            authLinkMobileToggle.textContent = 'Logout';
+            authLinkDesktop.addEventListener('click', handleLogout);
+            authLinkMobileToggle.addEventListener('click', handleLogout);
+
+            // Show main nav links
+            mobileMenu.querySelectorAll('.main-nav-link').forEach(link => link.classList.remove('hidden'));
+            document.querySelectorAll('.nav-link[data-section]').forEach(link => link.classList.remove('hidden'));
+
+            updateActiveNavLink('home'); // Set 'Home' as active by default
+            triggerSlideUpAnimations(); // Animate sections in main content
+            window.scrollTo(0,0); // Scroll to top
+        }
+
+        function handleLoginSubmit(event) {
+            event.preventDefault();
+            const username = usernameInput.value.trim();
+            const password = passwordInput.value.trim();
+
+            // Mock credentials
+            if (username === 'admin' && password === 'password123') {
+                isLoggedIn = true;
+                loginMessage.textContent = 'Login successful! Loading gallery...';
+                loginMessage.className = 'mt-4 text-sm text-green-600';
+                setTimeout(() => {
+                    displayMainContent();
+                }, 1000); // Simulate loading
+            } else {
+                isLoggedIn = false;
+                loginMessage.textContent = 'Invalid username or password. Please try again.';
+                loginMessage.className = 'mt-4 text-sm text-red-500';
+                passwordInput.value = ''; // Clear password field
+            }
+        }
+
+        function handleLogout(event) {
+            if(event) event.preventDefault();
+            isLoggedIn = false;
+            displayLoginPage();
+             // Close mobile menu if open
+            if (!mobileMenu.classList.contains('hidden')) {
+                mobileMenu.classList.add('hidden');
+                hamburgerIcon.classList.remove('hidden');
+                closeIcon.classList.add('hidden');
+            }
+        }
+        
+        // --- Navigation and Scrolling ---
+        function updateActiveNavLink(sectionId) {
+            allNavLinks.forEach(link => {
+                link.classList.remove('active');
+                if (link.dataset && link.dataset.section === sectionId) {
+                    link.classList.add('active');
+                }
+            });
+        }
+
+        mainNavLinks.forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                if (!isLoggedIn) return; // Don't scroll if not logged in
+
+                const targetId = this.getAttribute('href');
+                const targetElement = document.querySelector(targetId);
+                if (targetElement) {
+                    targetElement.scrollIntoView({ behavior: 'smooth' });
+                    updateActiveNavLink(targetId.substring(1));
+                    // Close mobile menu if open
+                    if (!mobileMenu.classList.contains('hidden')) {
+                        mobileMenu.classList.add('hidden');
+                        hamburgerIcon.classList.remove('hidden');
+                        closeIcon.classList.add('hidden');
+                    }
+                }
+            });
+        });
+        
+        brandLogo.addEventListener('click', (e) => {
+            e.preventDefault();
+            if (isLoggedIn) {
+                 const targetElement = document.querySelector('#home');
+                 if (targetElement) {
+                    targetElement.scrollIntoView({ behavior: 'smooth' });
+                    updateActiveNavLink('home');
+                 }
+            } else {
+                displayLoginPage(); // Go to login page if not logged in
+            }
+        });
+
+        // Intersection Observer for active nav link on scroll (only when logged in)
+        const observerOptions = { root: null, rootMargin: '0px', threshold: 0.4 };
+        const scrollObserver = new IntersectionObserver((entries) => {
+            if (!isLoggedIn) return;
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    updateActiveNavLink(entry.target.id);
+                }
+            });
+        }, observerOptions);
+
+        sections.forEach(section => { // Observe sections in mainContent
+            scrollObserver.observe(section);
+        });
+        
+        // --- Mobile Menu ---
+        mobileMenuButton.addEventListener('click', () => {
+            mobileMenu.classList.toggle('hidden');
+            hamburgerIcon.classList.toggle('hidden');
+            closeIcon.classList.toggle('hidden');
+            // Toggle visibility of auth link inside mobile toggle area based on menu state
+            authLinkMobileToggle.classList.toggle('hidden', !mobileMenu.classList.contains('hidden'));
+        });
+
+        // Sync authLinkMobileToggle with authLinkDesktop
+        // This is simplified: authLinkMobileToggle is now the primary mobile auth button outside the menu
+        // If you want one inside the menu, you'd add another element and sync its text/handler.
+
+        // --- Gallery Population and Modal ---
+        const galleryGrid = document.getElementById('gallery-grid');
+        const imageModal = document.getElementById('imageModal');
+        const modalImage = document.getElementById('modalImage');
+        const modalCaption = document.getElementById('modalCaption');
+        const closeModalButton = document.getElementById('closeModalButton');
+
+        function populateGallery() {
+            galleryGrid.innerHTML = ''; // Clear previous items if any
+            artworks.forEach(art => {
+                const item = document.createElement('div');
+                // Add 'slide-up' for gallery items to animate them in when gallery is shown
+                item.className = 'gallery-item bg-gray-200 rounded-lg overflow-hidden shadow-lg hover:shadow-2xl transition-shadow duration-300 cursor-pointer slide-up';
+                item.innerHTML = `
+                    <img src="${art.imageUrl}" alt="${art.altText}" class="w-full h-auto object-cover" onerror="this.onerror=null; this.src='https://placehold.co/400x400/CCCCCC/FFFFFF?text=Image+Error';">
+                    <div class="p-4">
+                        <h3 class="text-lg font-semibold text-gray-800">${art.title}</h3>
+                        <p class="text-sm text-gray-600">${art.medium}, ${art.year}</p>
+                    </div>
+                `;
+                item.addEventListener('click', () => {
+                    modalImage.src = art.imageUrl;
+                    modalImage.onerror = function() {
+                        this.onerror=null;
+                        this.src='https://placehold.co/600x400/CCCCCC/FFFFFF?text=Image+Not+Found';
+                        modalCaption.textContent = `${art.title} (Image not found)`;
+                    };
+                    modalCaption.textContent = `${art.title} - ${art.description}`;
+                    imageModal.style.display = "flex";
+                    document.body.style.overflow = 'hidden';
+                });
+                galleryGrid.appendChild(item);
+            });
+        }
+        populateGallery(); // Populate gallery on script load
+
+        closeModalButton.addEventListener('click', () => {
+            imageModal.style.display = "none";
+            document.body.style.overflow = 'auto';
+        });
+        window.addEventListener('click', (event) => {
+            if (event.target === imageModal) {
+                imageModal.style.display = "none";
+                document.body.style.overflow = 'auto';
+            }
+        });
+        document.addEventListener('keydown', function(event) {
+            if (event.key === "Escape" && imageModal.style.display === "flex") {
+                imageModal.style.display = "none";
+                document.body.style.overflow = 'auto';
+            }
+        });
+
+        // --- Contact Form ---
+        const contactForm = document.getElementById('contact-form');
+        const formSubmissionMessage = document.getElementById('form-submission-message');
+        contactForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            const name = document.getElementById('name').value;
+            const email = document.getElementById('email').value;
+            const message = document.getElementById('message').value;
+
+            if (!name || !email || !message) {
+                formSubmissionMessage.textContent = 'Please fill out all fields.';
+                formSubmissionMessage.className = 'text-red-500 text-sm';
+                return;
+            }
+            formSubmissionMessage.textContent = 'Thank you for your message! I will get back to you soon.';
+            formSubmissionMessage.className = 'text-green-600 text-sm font-semibold';
+            contactForm.reset();
+            setTimeout(() => { formSubmissionMessage.textContent = ''; }, 5000);
+        });
+
+        // --- Footer Year ---
+        document.getElementById('currentYear').textContent = new Date().getFullYear();
+
+        // --- Animations ---
+        function triggerSlideUpAnimations() {
+            // For sections in main content
+            const animatedElements = mainContent.querySelectorAll('.slide-up');
+            animatedElements.forEach((el, index) => {
+                // Reset animation by removing and adding class if needed, or ensure it runs once
+                el.style.animationDelay = `${index * 0.05}s`; // Stagger animation slightly
+                el.classList.remove('slide-up-active'); // Remove if re-triggering
+                void el.offsetWidth; // Force reflow
+                el.classList.add('slide-up-active'); // Add class to trigger animation
+            });
+             // For gallery items specifically, ensure they animate when gallery becomes visible
+            const galleryItems = galleryGrid.querySelectorAll('.gallery-item.slide-up');
+            galleryItems.forEach((el, index) => {
+                el.style.animationDelay = `${index * 0.05}s`;
+                el.classList.remove('slide-up-active');
+                void el.offsetWidth;
+                el.classList.add('slide-up-active');
+            });
+        }
+        
+        // --- Initialization ---
+        function initializeApp() {
+            loginForm.addEventListener('submit', handleLoginSubmit);
+            authLinkDesktop.addEventListener('click', (e) => { // Initial setup for login link
+                e.preventDefault();
+                if (isLoggedIn) handleLogout(e);
+                else displayLoginPage(); // Should not happen if already on login page, but good fallback
+            });
+            authLinkMobileToggle.addEventListener('click', (e) => {
+                e.preventDefault();
+                if (isLoggedIn) handleLogout(e);
+                else displayLoginPage();
+            });
+
+            // Initial page state: show login page
+            displayLoginPage();
+        }
+
+        initializeApp();
+
+    </script>
+</body>
+</html>
